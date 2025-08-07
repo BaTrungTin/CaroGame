@@ -222,7 +222,7 @@ async def handle_websocket(websocket, path):
                     break
 
 def start_http_server():
-    os.chdir('/workspace/project-tic-tac-toe/static')
+    # Use current directory instead of hardcoded path
     httpd = HTTPServer(('localhost', 8000), SimpleHTTPRequestHandler)
     print("HTTP Server running on http://localhost:8000")
     httpd.serve_forever()
