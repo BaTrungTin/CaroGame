@@ -125,7 +125,7 @@
     <script>
         const gameMode = localStorage.getItem('gameMode') || 'PVP';
         const script = document.createElement('script');
-        script.src = gameMode === 'PVE' ? 'pve.js' : 'client.js';
+        script.src = gameMode === 'PVE' ? 'pve.js' : 'simple_client.js';
         script.defer = true;
         document.head.appendChild(script);
 
