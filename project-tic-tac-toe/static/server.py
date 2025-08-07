@@ -61,6 +61,7 @@ async def join_room(sid, data):
     player_name = data["player_name"]
     print(f"Client {sid} joining room {room_id} as {player_name}")
     if room_id not in games:
+        # First player creates the room
         games[room_id] = {
             "players": {sid: "X"},
             "board": [[None] * 15 for _ in range(15)],
@@ -68,21 +69,39 @@ async def join_room(sid, data):
             "roles": {sid: "X"},
             "player_names": {sid: player_name}
         }
-        await sio.emit("joined", {"symbol": "X", "message": f"{player_name} (X) chờ đối thủ..."}, to=sid)
+        await sio.emit("joined", {
+            "symbol": "X",
+            "message": f"🏠 Phòng {room_id} đã được tạo! {player_name} (X) đang chờ đối thủ...",
+            "room_status": "created"
+        }, to=sid)
+        print(f"Room {room_id} created by {player_name}")
     elif len(games[room_id]["players"]) == 1:
+        # Second player joins the room
         games[room_id]["players"][sid] = "O"
         games[room_id]["roles"][sid] = "O"
         games[room_id]["player_names"][sid] = player_name
         player1_sid = next(sid_ for sid_ in games[room_id]["players"] if sid_ != sid)
         player1_name = games[room_id]["player_names"][player1_sid]
-        await sio.emit("joined", {"symbol": "O", "message": f"{player_name} (O) tham gia!"}, to=sid)
+
+        await sio.emit("joined", {
+            "symbol": "O",
+            "message": f"🚪 {player_name} (O) đã tham gia phòng {room_id}!",
+            "room_status": "joined"
+        }, to=sid)
+
+        await sio.emit("opponent_joined", {
+            "message": f"🎉 {player_name} (O) đã tham gia! Chuẩn bị chiến đấu..."
+        }, to=player1_sid)
+
+        # Start the game after a short delay
+        await asyncio.sleep(1)
         await sio.emit("start_game", {
-            "message": f"Bắt đầu! {player1_name} (X) đi trước",
+            "message": f"🎮 Trận đấu bắt đầu! {player1_name} (X) đi trước",
             "current_player": "X"
         }, room=room_id)
         print(f"Game started in room {room_id}: {player1_name} (X) vs {player_name} (O)")
     else:
-        await sio.emit("error", {"message": "Phòng đã đầy!"}, to=sid)
+        await sio.emit("error", {"message": f"❌ Phòng {room_id} đã đầy! Vui lòng thử phòng khác."}, to=sid)
         print(f"Room {room_id} full, rejecting {sid}")
 
 @sio.event
@@ -92,17 +111,20 @@ async def make_move(sid, data):
     col = data["col"]
     print(f"Move from {sid} in room {room_id}: ({row}, {col})")
     if room_id not in games or sid not in games[room_id]["players"]:
-        await sio.emit("error", {"message": "Không tìm thấy phòng hoặc người chơi!"}, to=sid)
+        if room_id not in games:
+            await sio.emit("error", {"message": f"❌ Không tìm thấy phòng {room_id}! Vui lòng kiểm tra lại ID phòng."}, to=sid)
+        else:
+            await sio.emit("error", {"message": "❌ Bạn không có trong phòng này!"}, to=sid)
         print(f"Invalid room or player: {sid}, {room_id}")
         return
     game = games[room_id]
     symbol = game["players"][sid]
     if game["current_player"] != symbol:
-        await sio.emit("error", {"message": "Chưa đến lượt bạn!"}, to=sid)
+        await sio.emit("error", {"message": "⏰ Chưa đến lượt bạn!"}, to=sid)
         print(f"Not {sid}'s turn: current_player is {game['current_player']}, player is {symbol}")
         return
     if game["board"][row][col] is not None:
-        await sio.emit("error", {"message": "Ô đã được chọn!"}, to=sid)
+        await sio.emit("error", {"message": "🚫 Ô đã được chọn!"}, to=sid)
         print(f"Cell ({row}, {col}) already taken")
         return
 
@@ -145,14 +167,18 @@ async def replay_game(sid, data):
     room_id = data["room_id"]
     print(f"Replay requested by {sid} in room {room_id}")
     if room_id not in games or sid not in games[room_id]["players"]:
-        await sio.emit("error", {"message": "Không tìm thấy phòng hoặc người chơi!"}, to=sid)
+        if room_id not in games:
+            await sio.emit("error", {"message": f"❌ Không tìm thấy phòng {room_id}!"}, to=sid)
+        else:
+            await sio.emit("error", {"message": "❌ Bạn không có trong phòng này!"}, to=sid)
         print(f"Invalid replay request: {sid}, {room_id}")
         return
     game = games[room_id]
     if len(game["players"]) != 2:
-        await sio.emit("error", {"message": "Chờ đối thủ tham gia lại!"}, to=sid)
+        await sio.emit("error", {"message": "⏳ Chờ đối thủ tham gia lại để có thể chơi tiếp!"}, to=sid)
         print(f"Cannot replay: only {len(game['players'])} players in room {room_id}")
         return
+    # Swap roles for the replay
     for player_sid in game["players"]:
         game["players"][player_sid] = "O" if game["players"][player_sid] == "X" else "X"
         game["roles"][player_sid] = game["players"][player_sid]
@@ -162,9 +188,9 @@ async def replay_game(sid, data):
     x_player_name = game["player_names"].get(x_player, "Người chơi")
     await sio.emit("replay", {
         "players": game["players"],
-        "message": f"Chơi lại! {x_player_name} (X) đi trước"
+        "message": f"🔄 Chơi lại! {x_player_name} (X) đi trước"
     }, room=room_id)
     print(f"Replayed in room {room_id}: {x_player_name} (X) goes first")
 
 if __name__ == "__main__":
-    web.run_app(app, host="192.168.2.13", port=3000)
+    web.run_app(app, host="localhost", port=3000)

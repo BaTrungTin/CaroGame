@@ -12,6 +12,67 @@
     .side-cat {
     width: 400px;
     }
+    .pvp-options {
+        display: none;
+        margin: 20px 0;
+        padding: 20px;
+        border: 2px solid #4CAF50;
+        border-radius: 10px;
+        background-color: rgba(255, 255, 255, 0.9);
+    }
+    .pvp-options.show {
+        display: block;
+    }
+    .room-option {
+        margin: 10px 0;
+        padding: 15px;
+        border: 2px solid #ddd;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-align: center;
+        background-color: white;
+    }
+    .room-option:hover {
+        border-color: #4CAF50;
+        background-color: #f0f8f0;
+    }
+    .room-option.selected {
+        border-color: #4CAF50;
+        background-color: #e8f5e8;
+    }
+    .room-input {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 2px solid #ddd;
+        border-radius: 5px;
+        font-size: 16px;
+        text-align: center;
+    }
+    .room-id-display {
+        font-size: 24px;
+        font-weight: bold;
+        color: #4CAF50;
+        margin: 10px 0;
+        padding: 10px;
+        background-color: #f0f8f0;
+        border-radius: 5px;
+        border: 2px dashed #4CAF50;
+    }
+    .copy-button {
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        border-radius: 3px;
+        cursor: pointer;
+        margin-left: 10px;
+        font-size: 12px;
+    }
+    .copy-button:hover {
+        background-color: #45a049;
+    }
 </style>
     <div class="background">
         <!-- <img id="background" src="./img/iosd.png" alt="Background" > -->
@@ -35,6 +96,34 @@
                 <button class="fonts-button mode-btn" onclick="selectMode('PVP')">PVP</button>
                 <button class="fonts-button" onclick="confirmStart()">Start Game</button>
             </div>
+
+            <!-- PvP Options -->
+            <div id="pvpOptions" class="pvp-options">
+                <h3>Chọn cách chơi PvP:</h3>
+                
+                <div class="room-option" onclick="selectRoomOption('create')">
+                    <h4>🏠 Tạo phòng mới</h4>
+                    <p>Tạo phòng mới và chia sẻ ID với bạn bè</p>
+                </div>
+                
+                <div class="room-option" onclick="selectRoomOption('join')">
+                    <h4>🚪 Tham gia phòng</h4>
+                    <p>Nhập ID phòng để tham gia phòng đã có</p>
+                </div>
+
+                <div id="createRoomSection" style="display: none;">
+                    <div class="room-id-display">
+                        ID Phòng của bạn: <span id="generatedRoomId"></span>
+                        <button class="copy-button" onclick="copyRoomId()">Copy</button>
+                    </div>
+                    <p>Chia sẻ ID này với bạn bè để họ có thể tham gia!</p>
+                </div>
+
+                <div id="joinRoomSection" style="display: none;">
+                    <input type="text" id="roomIdInput" class="room-input" placeholder="Nhập ID phòng (ví dụ: ABC123)" maxlength="6">
+                    <p>Nhập ID phòng mà bạn bè đã chia sẻ</p>
+                </div>
+            </div>
         </div>
 
         <!-- Nút Return Icon -->
@@ -45,11 +134,69 @@
 
     <script>
         let selectedMode = '';
+        let roomOption = '';
+        let generatedRoomId = '';
 
         function selectMode(mode) {
             selectedMode = mode;
             document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
             document.querySelector(`.mode-btn[onclick="selectMode('${mode}')"]`).classList.add('active');
+            
+            const pvpOptions = document.getElementById('pvpOptions');
+            if (mode === 'PVP') {
+                pvpOptions.classList.add('show');
+            } else {
+                pvpOptions.classList.remove('show');
+                resetPvPOptions();
+            }
+        }
+
+        function selectRoomOption(option) {
+            roomOption = option;
+            document.querySelectorAll('.room-option').forEach(opt => opt.classList.remove('selected'));
+            document.querySelector(`.room-option[onclick="selectRoomOption('${option}')"]`).classList.add('selected');
+            
+            const createSection = document.getElementById('createRoomSection');
+            const joinSection = document.getElementById('joinRoomSection');
+            
+            if (option === 'create') {
+                generatedRoomId = generateRoomId();
+                document.getElementById('generatedRoomId').textContent = generatedRoomId;
+                createSection.style.display = 'block';
+                joinSection.style.display = 'none';
+            } else if (option === 'join') {
+                createSection.style.display = 'none';
+                joinSection.style.display = 'block';
+            }
+        }
+
+        function generateRoomId() {
+            const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 6; i++) {
+                result += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+            return result;
+        }
+
+        function copyRoomId() {
+            navigator.clipboard.writeText(generatedRoomId).then(() => {
+                const button = document.querySelector('.copy-button');
+                const originalText = button.textContent;
+                button.textContent = 'Copied!';
+                setTimeout(() => {
+                    button.textContent = originalText;
+                }, 2000);
+            });
+        }
+
+        function resetPvPOptions() {
+            roomOption = '';
+            generatedRoomId = '';
+            document.querySelectorAll('.room-option').forEach(opt => opt.classList.remove('selected'));
+            document.getElementById('createRoomSection').style.display = 'none';
+            document.getElementById('joinRoomSection').style.display = 'none';
+            document.getElementById('roomIdInput').value = '';
         }
 
         function confirmStart() {
@@ -70,11 +217,40 @@
                 return;
             }
 
+            let roomId = 'default';
+            
+            if (selectedMode === 'PVP') {
+                if (!roomOption) {
+                    errorMessage.textContent = 'Vui lòng chọn tạo phòng hoặc tham gia phòng!';
+                    errorMessage.style.display = 'block';
+                    return;
+                }
+                
+                if (roomOption === 'create') {
+                    roomId = generatedRoomId;
+                } else if (roomOption === 'join') {
+                    roomId = document.getElementById('roomIdInput').value.trim().toUpperCase();
+                    if (!roomId) {
+                        errorMessage.textContent = 'Vui lòng nhập ID phòng!';
+                        errorMessage.style.display = 'block';
+                        return;
+                    }
+                    if (roomId.length !== 6) {
+                        errorMessage.textContent = 'ID phòng phải có 6 ký tự!';
+                        errorMessage.style.display = 'block';
+                        return;
+                    }
+                }
+            }
+
             localStorage.setItem('playerName', playerName);
             localStorage.setItem('gameMode', selectedMode);
+            localStorage.setItem('roomId', roomId);
+            localStorage.setItem('roomOption', roomOption);
+            
             document.body.classList.add('page-transition');
             setTimeout(() => {
-                window.location.href = `game.html?player=${encodeURIComponent(playerName)}&mode=${selectedMode}`;
+                window.location.href = `game.html?player=${encodeURIComponent(playerName)}&mode=${selectedMode}&room=${roomId}`;
             }, 1000);
         }
 

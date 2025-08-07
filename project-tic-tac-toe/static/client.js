@@ -1,4 +1,4 @@
-const socket = io('http://192.168.2.13:3000');
+const socket = io('http://localhost:3000');
 const boardElement = document.getElementById('board');
 const status = document.getElementById('status');
 const modeElement = document.getElementById('mode');
@@ -12,8 +12,22 @@ let mySymbol = null;
 let currentPlayer = PLAYER_X;
 const playerName = localStorage.getItem('playerName') || 'Người chơi';
 const roomId = localStorage.getItem('roomId') || 'default';
+const roomOption = localStorage.getItem('roomOption') || '';
 
-modeElement.textContent = 'PVP';
+// Display room information for PvP
+if (localStorage.getItem('gameMode') === 'PVP') {
+    modeElement.textContent = `PVP - Phòng: ${roomId}`;
+    if (roomOption === 'create') {
+        status.textContent = `Phòng đã tạo! Chia sẻ ID "${roomId}" với bạn bè để họ tham gia...`;
+    } else if (roomOption === 'join') {
+        status.textContent = `Đang tham gia phòng "${roomId}"...`;
+    } else {
+        status.textContent = 'Đang kết nối...';
+    }
+} else {
+    modeElement.textContent = 'PVE';
+    status.textContent = 'Đang khởi tạo...';
+}
 
 function createBoard() {
     boardElement.innerHTML = '';
@@ -111,6 +125,11 @@ socket.on('joined', (data) => {
     mySymbol = data.symbol;
     status.textContent = data.message;
     console.log(`Joined: symbol=${mySymbol}, message=${data.message}`);
+});
+
+socket.on('opponent_joined', (data) => {
+    status.textContent = data.message;
+    console.log(`Opponent joined: ${data.message}`);
 });
 
 socket.on('start_game', (data) => {
