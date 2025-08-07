@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Start Game</title>
+    <link rel="stylesheet" href="./css/startGame.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Jersey+15&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" /></head>
+<body>
+    <style>
+    .side-cat {
+    width: 400px;
+    }
+</style>
+    <div class="background">
+        <!-- <img id="background" src="./img/iosd.png" alt="Background" > -->
+    </div>
+
+    <div class="main-layout">
+        <!-- Cột Trái - Mèo Gaming -->
+        <div class="left-side">
+            <img src="./img/catplaygame.gif" class="side-cat" alt="Gaming Cat" >
+        </div>
+
+        <!-- Cột Phải - Form Nhập Tên & Mode -->
+        <div class="right-side">
+            <h1 id="title-menu">Start Game</h1>
+            <label for="playerName" class="sr-only">Enter Your Name</label>
+            <input type="text" id="playerName" placeholder="Enter Your Name" class="input-field" aria-label="Player Name">
+            <div class="error-message" id="errorMessage"></div>
+
+            <div class="menu-buttons">
+                <button class="fonts-button mode-btn" onclick="selectMode('PVE')">PVE</button>
+                <button class="fonts-button mode-btn" onclick="selectMode('PVP')">PVP</button>
+                <button class="fonts-button" onclick="confirmStart()">Start Game</button>
+            </div>
+        </div>
+
+        <!-- Nút Return Icon -->
+        <div class="return-icon" onclick="returnToMenu()">
+            <i class="fas fa-arrow-left"></i>
+        </div>
+    </div>
+
+    <script>
+        let selectedMode = '';
+
+        function selectMode(mode) {
+            selectedMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.mode-btn[onclick="selectMode('${mode}')"]`).classList.add('active');
+        }
+
+        function confirmStart() {
+            const playerName = document.getElementById('playerName').value.trim();
+            const errorMessage = document.getElementById('errorMessage');
+            
+            errorMessage.style.display = 'none';
+            errorMessage.textContent = '';
+
+            if (!playerName) {
+                errorMessage.textContent = 'Please enter your name!';
+                errorMessage.style.display = 'block';
+                return;
+            }
+            if (!selectedMode) {
+                errorMessage.textContent = 'Please select a mode!';
+                errorMessage.style.display = 'block';
+                return;
+            }
+
+            localStorage.setItem('playerName', playerName);
+            localStorage.setItem('gameMode', selectedMode);
+            document.body.classList.add('page-transition');
+            setTimeout(() => {
+                window.location.href = `game.html?player=${encodeURIComponent(playerName)}&mode=${selectedMode}`;
+            }, 1000);
+        }
+
+        function returnToMenu() {
+            document.body.classList.add('page-transition');
+            setTimeout(() => {
+                window.location.href = './index.html';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caro Game</title>
+    <link rel="stylesheet" href="./css/startGame.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Jersey+15&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css" integrity="sha512-1ycn6IcaQQ40/MKBW2W4Rhis/DbILU74C1vSrLJxCq57o941Ym01SwNsOMqvEBFlcgUa6xLiPY/NS5R+E6ztJQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: 'Bangers', cursive;
+        }
+        .main-layout {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .left-side {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .side-cat {
+            width: 400px;
+        }
+        .right-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        table {
+            border-collapse: collapse;
+            margin: 20px auto;
+            position: relative;
+            z-index: 1;
+        }
+        td {
+            width: 30px;
+            height: 30px;
+            text-align: center;
+            vertical-align: middle;
+            border: 1px solid #333;
+            font-size: 20px;
+            cursor: pointer;
+        }
+        td.x {
+            color: blue;
+        }
+        td.o {
+            color: red;
+        }
+        #status {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .button-container {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        #back-button, #replay-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-family: 'Bangers', cursive;
+        }
+        #back-button:hover, #replay-button:hover {
+            background-color: #45a049;
+        }
+        .return-icon {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        #win-line-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            z-index: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="background"></div>
+    <div class="main-layout">
+        <div class="left-side">
+            <img src="./img/catplaygame.gif" class="side-cat" alt="Gaming Cat">
+        </div>
+        <div class="right-side">
+            <h1 id="title-menu">Caro Game - <span id="mode"></span></h1>
+            <div id="status">Đang khởi tạo...</div>
+            <table id="board"></table>
+            <canvas id="win-line-canvas"></canvas>
+            <div class="button-container">
+                <button id="back-button" onclick="returnToMenu()">Quay lại</button>
+                <button id="replay-button" onclick="replayGame()">Chơi lại</button>
+            </div>
+        </div>
+        <div class="return-icon" onclick="returnToMenu()">
+            <i class="fas fa-arrow-left"></i>
+        </div>
+    </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.5/socket.io.min.js"></script>
+    <script>
+        const gameMode = localStorage.getItem('gameMode') || 'PVP';
+        const script = document.createElement('script');
+        script.src = gameMode === 'PVE' ? 'pve.js' : 'client.js';
+        script.defer = true;
+        document.head.appendChild(script);
+
+        function returnToMenu() {
+            document.body.classList.add('page-transition');
+            setTimeout(() => {
+                window.location.href = './index.html';
+            }, 1000);
+        }
+    </script>
+</body>
+</html>

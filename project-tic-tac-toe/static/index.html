@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caro Game</title>
+    <link rel="stylesheet" href="./css/mainMenu.css">
+    <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Jersey+15&display=swap" rel="stylesheet">
+    <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"></script>
+  <script src="client.js" defer></script>
+  <style>
+    table { border-collapse: collapse; margin: 20px auto; }
+    td {
+      width: 30px; height: 30px; text-align: center; vertical-align: middle;
+      border: 1px solid #333; font-size: 20px; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+    <!-- Background -->
+    <div class="background">
+        <!-- <img id="background" src="./img/ios.png" alt="Background"> -->
+    </div>
+    <!-- Layout 2 Cột -->
+    <div class="main-layout">
+        <!-- Cột Trái - Mèo Gaming -->
+        <div class="left-side">
+            <img src="./img/gaming.gif" class="side-cat">
+        </div>
+
+        <!-- Cột Phải - Menu -->
+        <div class="right-side">
+    <h1 id="title-menu">Caro Game</h1>
+    <div class="menu-buttons-container">
+        <div class="menu-buttons">
+            <button class="fonts-button" onclick="startGame()">Play</button>
+            <button class="fonts-button" onclick="openOptions()">Options</button>
+            <button class="fonts-button" onclick="showCredits()">Credits</button>
+        </div>
+    </div>
+</div>
+
+    </div>
+    
+
+    <script src="mainMenu.js"></script>
+    <script>
+    function startGame() {
+        document.body.classList.add('page-transition');
+        setTimeout(() => {
+            window.location.href = './startGame.html';  // Load blank page sau hiệu ứng
+        }, 1000);
+    }
+
+    function openOptions() {
+        alert('Options clicked');
+    }
+
+    function showCredits() {
+        alert('Credits clicked');
+    }
+
+    function exitGame() {
+        alert('Exit clicked');
+    }
+</script>
+
+</body>
+</html>
