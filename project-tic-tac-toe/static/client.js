@@ -1,19 +1,39 @@
-const socket = io('http://192.168.2.13:3000');
+const socket = io('http://localhost:3000');
 const boardElement = document.getElementById('board');
 const status = document.getElementById('status');
 const modeElement = document.getElementById('mode');
-const canvas = document.getElementById('win-line-canvas');
-const ctx = canvas.getContext('2d');
 const BOARD_SIZE = 15;
 const PLAYER_X = 'X';
 const PLAYER_O = 'O';
+
+// Game state
 let board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
 let mySymbol = null;
 let currentPlayer = PLAYER_X;
-const playerName = localStorage.getItem('playerName') || 'Người chơi';
-const roomId = localStorage.getItem('roomId') || 'default';
+let gameStarted = false;
+let roomId = null;
 
-modeElement.textContent = 'PVP';
+// Get player info from localStorage
+const playerName = localStorage.getItem('playerName') || 'Người chơi';
+const gameMode = localStorage.getItem('gameMode') || 'PVP';
+const roomOption = localStorage.getItem('roomOption') || '';
+
+// Initialize based on game mode
+if (gameMode === 'PVP') {
+    roomId = localStorage.getItem('roomId');
+    modeElement.textContent = `PVP - Phòng: ${roomId}`;
+    
+    if (roomOption === 'create') {
+        status.textContent = `Đang tạo phòng ${roomId}...`;
+    } else if (roomOption === 'join') {
+        status.textContent = `Đang tham gia phòng ${roomId}...`;
+    } else {
+        status.textContent = 'Đang kết nối...';
+    }
+} else {
+    modeElement.textContent = 'PVE';
+    status.textContent = 'Đang khởi tạo...';
+}
 
 function createBoard() {
     boardElement.innerHTML = '';
@@ -28,32 +48,38 @@ function createBoard() {
         }
         boardElement.appendChild(row);
     }
-    const tableRect = boardElement.getBoundingClientRect();
-    canvas.width = tableRect.width;
-    canvas.height = tableRect.height;
-    canvas.style.left = `${tableRect.left}px`;
-    canvas.style.top = `${tableRect.top}px`;
 }
 
 function handleCellClick(e) {
+    if (!gameStarted) {
+        status.textContent = 'Game chưa bắt đầu!';
+        return;
+    }
+    
     if (!mySymbol) {
         status.textContent = 'Chưa được gán ký hiệu!';
-        console.log('No symbol assigned yet');
         return;
     }
+    
     if (mySymbol !== currentPlayer) {
         status.textContent = 'Chưa đến lượt bạn!';
-        console.log(`Not your turn: mySymbol=${mySymbol}, currentPlayer=${currentPlayer}`);
         return;
     }
+    
     const row = parseInt(e.target.dataset.row);
     const col = parseInt(e.target.dataset.col);
+    
     if (board[row][col]) {
-        console.log('Ô đã được chọn:', row, col);
+        status.textContent = 'Ô đã được chọn!';
         return;
     }
-    console.log(`Sending move: (${row}, ${col})`);
-    socket.emit('make_move', { room_id: roomId, row, col });
+    
+    // Send move to server
+    socket.emit('make_move', {
+        room_id: roomId,
+        row: row,
+        col: col
+    });
 }
 
 function updateBoard() {
@@ -68,38 +94,55 @@ function updateBoard() {
 }
 
 function disableBoard() {
+    gameStarted = false;
     const cells = boardElement.getElementsByTagName('td');
     for (let cell of cells) {
-        cell.removeEventListener('click', handleCellClick);
+        cell.style.pointerEvents = 'none';
     }
 }
 
-function highlightWinningLine(winInfo) {
-    console.log('Highlighting winning line:', winInfo);
-    const { direction, start, end } = winInfo;
-    const [dr, dc] = direction;
-    const cellWidth = canvas.width / BOARD_SIZE;
-    const cellHeight = canvas.height / BOARD_SIZE;
-    const startX = start[1] * cellWidth + cellWidth / 2;
-    const startY = start[0] * cellHeight + cellHeight / 2;
-    const endX = end[1] * cellWidth + cellWidth / 2;
-    const endY = end[0] * cellHeight + cellHeight / 2;
-    ctx.beginPath();
-    ctx.moveTo(startX, startY);
-    ctx.lineTo(endX, endY);
-    ctx.strokeStyle = 'yellow';
-    ctx.lineWidth = 5;
-    ctx.stroke();
+function enableBoard() {
+    gameStarted = true;
+    const cells = boardElement.getElementsByTagName('td');
+    for (let cell of cells) {
+        cell.style.pointerEvents = 'auto';
+    }
+}
+
+function resetBoard() {
+    board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
+    updateBoard();
+    enableBoard();
 }
 
 function replayGame() {
-    console.log('Requesting replay');
-    socket.emit('replay_game', { room_id: roomId });
+    if (!roomId) {
+        status.textContent = 'Không có thông tin phòng để chơi lại!';
+        return;
+    }
+    
+    socket.emit('restart_game', { room_id: roomId });
 }
 
+// Socket event handlers
 socket.on('connect', () => {
     console.log('Connected to server');
-    socket.emit('join_room', { room_id: roomId, player_name: playerName });
+    
+    if (gameMode === 'PVP' && roomId) {
+        if (roomOption === 'create') {
+            // Create room
+            socket.emit('create_room', {
+                room_id: roomId,
+                player_name: playerName
+            });
+        } else if (roomOption === 'join') {
+            // Join existing room
+            socket.emit('join_room', {
+                room_id: roomId,
+                player_name: playerName
+            });
+        }
+    }
 });
 
 socket.on('connect_error', (err) => {
@@ -107,51 +150,77 @@ socket.on('connect_error', (err) => {
     status.textContent = 'Không thể kết nối đến server!';
 });
 
-socket.on('joined', (data) => {
+socket.on('room_created', (data) => {
     mySymbol = data.symbol;
     status.textContent = data.message;
-    console.log(`Joined: symbol=${mySymbol}, message=${data.message}`);
+    console.log(`Room created: ${data.room_id}, symbol: ${data.symbol}`);
 });
 
-socket.on('start_game', (data) => {
+socket.on('room_joined', (data) => {
+    mySymbol = data.symbol;
+    status.textContent = data.message;
+    console.log(`Room joined: ${data.room_id}, symbol: ${data.symbol}`);
+});
+
+socket.on('opponent_joined', (data) => {
+    status.textContent = data.message;
+    console.log(`Opponent joined: ${data.message}`);
+});
+
+socket.on('game_start', (data) => {
     status.textContent = data.message;
     currentPlayer = data.current_player;
-    console.log(`Game started: currentPlayer=${currentPlayer}, message=${data.message}`);
+    gameStarted = true;
+    enableBoard();
+    console.log(`Game started: ${data.message}`);
 });
 
-socket.on('update_board', (data) => {
-    console.log('Update board:', data);
+socket.on('move_made', (data) => {
+    // Update board with the move
     board[data.row][data.col] = data.symbol;
     updateBoard();
+    
+    // Update current player
     currentPlayer = data.current_player;
     status.textContent = data.message;
+    
+    console.log(`Move made: (${data.row}, ${data.col}) = ${data.symbol}`);
 });
 
 socket.on('game_over', (data) => {
-    console.log('Game over:', data);
-    board[data.row][data.col] = data.symbol;
-    updateBoard();
-    status.textContent = data.winner ? `${data.winner} (${data.symbol}) thắng!` : data.message;
-    if (data.win_info) {
-        highlightWinningLine(data.win_info);
+    // Update board with final move
+    if (data.row !== undefined && data.col !== undefined) {
+        board[data.row][data.col] = data.symbol;
+        updateBoard();
     }
-    disableBoard();
-});
-
-socket.on('opponent_disconnect', () => {
-    status.textContent = 'Đối thủ đã ngắt kết nối!';
-    console.log('Opponent disconnected');
-    disableBoard();
-});
-
-socket.on('replay', (data) => {
-    mySymbol = data.players[socket.id];
-    board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
-    currentPlayer = PLAYER_X;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    createBoard();
+    
     status.textContent = data.message;
-    console.log(`Replay: mySymbol=${mySymbol}, message=${data.message}`);
+    disableBoard();
+    
+    console.log(`Game over: ${data.message}`);
+});
+
+socket.on('game_restarted', (data) => {
+    status.textContent = data.message;
+    currentPlayer = data.current_player;
+    resetBoard();
+    
+    // Update symbols if they were swapped
+    const players = data.players;
+    for (let symbol in players) {
+        if (players[symbol] === playerName) {
+            mySymbol = symbol;
+            break;
+        }
+    }
+    
+    console.log(`Game restarted: ${data.message}`);
+});
+
+socket.on('player_left', (data) => {
+    status.textContent = data.message;
+    disableBoard();
+    console.log(`Player left: ${data.message}`);
 });
 
 socket.on('error', (data) => {
@@ -159,4 +228,5 @@ socket.on('error', (data) => {
     console.log('Error:', data.message);
 });
 
+// Initialize the board
 createBoard();
